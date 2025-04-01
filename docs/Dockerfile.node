@@ -1,0 +1,43 @@
+# Stage 1: Build the website
+FROM node:18 AS builder
+
+WORKDIR /app
+
+# Copy package files first (relative to PROJECT ROOT)
+COPY ./gofr-website/website/package.json .
+COPY ./gofr-website/website/package-lock.json* .
+
+# Install dependencies
+RUN npm install
+
+# Copy entire website codebase (relative to PROJECT ROOT)
+COPY ./gofr-website/website/ .
+
+# Copy documentation files (relative to PROJECT ROOT)
+COPY  http-server/docs/quick-start /app/src/app/docs/quick-start
+COPY  http-server/docs/public/ /app/public
+COPY  http-server/docs/advanced-guide /app/src/app/docs/advanced-guide
+COPY  http-server/docs/datasources /app/src/app/docs/datasources
+COPY  http-server/docs/references /app/src/app/docs/references
+COPY  http-server/docs/page.md /app/src/app/docs
+COPY  http-server/docs/navigation.js /app/src/lib
+COPY  http-server/docs/events.json /app/src/app/events
+COPY  http-server/docs/testimonials.json /app/utils
+
+# Build
+ENV NODE_ENV=production
+RUN npm run build
+
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy built assets
+COPY --from=builder /app/out ./website
+
+# Install production server
+RUN npm install -g serve
+
+# Expose and run
+EXPOSE 3000
+CMD ["serve", "-s", "website", "-l", "3000", "-n"]
